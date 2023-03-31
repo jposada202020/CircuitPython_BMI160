@@ -177,7 +177,6 @@ class BMI160:
     def acceleration_bandwidth_parameter(self, value: int):
         self.acceleration_bandwidth_parameter = value
 
-
     @property
     def acceleration_output_data_rate(self):
         """
