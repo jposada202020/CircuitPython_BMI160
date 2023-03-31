@@ -41,6 +41,7 @@ __repo__ = "https://github.com/jposada202020/CircuitPython_BMI160.git"
 
 _I2C_ADDR = const(0x69)
 _REG_WHOAMI = const(0x00)
+_ERROR_CODE = const(0x02)
 _COMMAND = const(0x7E)
 _ACCEL_CONFIG = const(0x40)
 
@@ -109,6 +110,7 @@ class BMI160:
 
     _device_id = ROUnaryStruct(_REG_WHOAMI, "B")
     _soft_reset = UnaryStruct(_COMMAND, "B")
+    _error_code = UnaryStruct(_ERROR_CODE, "B")
     _acc_config = UnaryStruct(_ACCEL_CONFIG, "B")
 
     # ACC_CONF Register (0x40)
@@ -125,6 +127,8 @@ class BMI160:
             raise RuntimeError("Failed to find BMI160")
 
         self.soft_reset()
+        print(self.acceleration_output_data_rate)
+        print(bin(self._error_code))
 
     def soft_reset(self) -> NoReturn:
         """
@@ -139,7 +143,11 @@ class BMI160:
     @property
     def acceleration_undersample(self):
         """
-        The undersampling parameter is typically used in low power mode
+        The undersampling parameter is typically used in low power mode.
+        When acc_us is set to ‘0’ and the accelerometer is in low-power mode,
+        it will change to normal mode. If the acc_us is set to ‘0’ and a
+        command to enter low-power mode is sent to the Register (0x7E) CMD,
+        this command is ignored.
 
         +----------------------------------------+-------------------------+
         | Mode                                   | Value                   |
@@ -180,8 +188,11 @@ class BMI160:
     @property
     def acceleration_output_data_rate(self):
         """
-        Define the output data rate in Hz is given by :math:100/2^(8-acc_odr)
+        Define the output data rate in Hz is given by :math:`100/2^(8-accodr)`
         The output data rate is independent of the power mode setting for the sensor
+
+        Configurations without a bandwidth number are illegal settings and will
+        result in an error code in the Register (0x02) ERR_REG.
 
         +----------------------------------------+---------------------------------+
         | Mode                                   | Value                           |
