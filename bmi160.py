@@ -48,6 +48,7 @@ _COMMAND = const(0x7E)
 _ACCEL_CONFIG = const(0x40)
 _ACC_RANGE = const(0x41)
 _GYRO_CONFIG = const(0x42)
+_GYRO_RANGE = const(0x43)
 
 # RESET Command
 RESET_COMMAND = const(0xB6)
@@ -111,6 +112,17 @@ GYRO_NORMAL = const(0b10)
 GYRO_OSR2 = const(0b01)
 GYRO_OSR4 = const(0b00)
 
+# Gyro Power Modes
+GYRO_POWER_SUSPEND = const(0x14)
+GYRO_POWER_NORMAL = const(0x15)
+GYRO_POWER_FASTSTARTUP = const(0x17)
+
+# Gyro Ranges
+GYRO_RANGE_2000 = const(0b000)
+GYRO_RANGE_1000 = const(0b001)
+GYRO_RANGE_500 = const(0b010)
+GYRO_RANGE_250 = const(0b011)
+GYRO_RANGE_125 = const(0b100)
 
 # pylint: disable= invalid-name, too-many-instance-attributes, missing-function-docstring
 
@@ -176,6 +188,7 @@ class BMI160:
     # The register allows the selection of the accelerometer g-range
     _acc_range = RWBits(4, _ACC_RANGE, 0)
     acceleration_scale = {3: 16384, 5: 8192, 8: 4096, 12: 2048}
+    gyro_scale = {0: 16.4, 1: 32.8, 2: 65.6, 3: 131.2, 262.4}
 
     # Temperature
     _temp_data_msb = UnaryStruct(TEMP_MSB, "B")
@@ -192,8 +205,11 @@ class BMI160:
     # GYRO_CONF Register (0x41)
     # Sets the output data rate, the bandwidth, and the read mode of the gyro
     # sensor
-    _gyro_bwp = RWBits(2, _ACCEL_CONFIG, 4)
-    _gyro_odr = RWBits(4, _ACCEL_CONFIG, 0)
+    _gyro_bwp = RWBits(2, _GYRO_CONFIG, 4)
+    _gyro_odr = RWBits(4, _GYRO_CONFIG, 0)
+
+    # GYRO_RANGE Register (0x43)
+    _gyro_range = RWBits(3, _GYRO_RANGE, 0)
 
     def __init__(self, i2c_bus: I2C, address: int = _I2C_ADDR) -> None:
         self.i2c_device = i2c_device.I2CDevice(i2c_bus, address)
@@ -207,7 +223,7 @@ class BMI160:
         time.sleep(0.1)
         self._read = ACC_POWER_NORMAL
         time.sleep(0.1)
-        self._read = 0x15
+        self._read = GYRO_POWER_NORMAL
         time.sleep(0.1)
         self._read = 0x19
 
@@ -431,7 +447,7 @@ class BMI160:
     @property
     def gyro(self) -> Tuple[int, int, int]:
 
-        factor = 16.4
+        factor = self.gyro_scale[self.gyro_range]
 
         x = (self._gyro_data_x_msb * 256 + self._gyro_data_x_lsb) / factor
         y = (self._gyro_data_y_msb * 256 + self._gyro_data_y_lsb) / factor
@@ -526,3 +542,49 @@ class BMI160:
     @gyro_bandwidth_parameter.setter
     def gyro_bandwidth_parameter(self, value: int) -> NoReturn:
         self._gyro_bwp = value
+
+    def gyro_power_mode(self, value: int) -> NoReturn:
+        """
+        +-------------------------------------------+-------------------------+
+        | Mode                                      | Value                   |
+        +===========================================+=========================+
+        | :py:const:`BMI160.GYRO_POWER_SUSPEND`     | :py:const:`0x14`        |
+        +-------------------------------------------+-------------------------+
+        | :py:const:`BMI160.GYRO_POWER_NORMAL`      | :py:const:`0x15`        |
+        +-------------------------------------------+-------------------------+
+        | :py:const:`BMI160.GYRO_POWER_FASTSTARTUP` | :py:const:`0x17`        |
+        +-------------------------------------------+-------------------------+
+
+        """
+        self._read = value
+        time.sleep(0.1)
+
+    @property
+    def gyro_range(self) -> int:
+        """
+        The register allows the selection of the gyro g-range.
+        Changing the range of the accelerometer does not clear the data
+        ready bit in the Register (0x1B) STATUS. It is recommended to
+        read the Register (0x04-0x17) DATA after the range change to
+        remove a stall data ready bit from before the range change.
+
+        +----------------------------------------+-------------------------+
+        | Mode                                   | Value                   |
+        +========================================+=========================+
+        | :py:const:`BMI160.GYRO_RANGE_2000`     | :py:const:`0b000`       |
+        +----------------------------------------+-------------------------+
+        | :py:const:`BMI160.GYRO_RANGE_1000`     | :py:const:`0b001`       |
+        +----------------------------------------+-------------------------+
+        | :py:const:`BMI160.GYRO_RANGE_500`      | :py:const:`0b010`       |
+        +----------------------------------------+-------------------------+
+        | :py:const:`BMI160.GYRO_RANGE_250`      | :py:const:`0b011`       |
+        +----------------------------------------+-------------------------+
+        | :py:const:`BMI160.GYRO_RANGE_125`      | :py:const:`0b100`       |
+        +----------------------------------------+-------------------------+
+
+        """
+        return self._gyro_range
+
+    @gyro_range.setter
+    def gyro_range(self, value: int) -> NoReturn:
+        self._gyro_range = value
