@@ -447,7 +447,7 @@ class BMI160:
         Configurations without a bandwidth number are illegal settings and will
         result in an error code in the Register (0x02) ERR_REG.
 
-        ..warning ::
+        .. warning ::
             Lower ODR values than 25Hz are not allowed. If they are used they result
             in an error code in Register (0x02) ERR_REG.
 

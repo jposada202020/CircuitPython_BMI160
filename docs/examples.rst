@@ -7,6 +7,16 @@ Ensure your device works with this simple test.
     :caption: examples/bmi160_simpletest.py
     :linenos:
 
+Gyro Simple Test
+-----------------
+
+Simple test for the gyro functionality
+
+.. literalinclude:: ../examples/bmi160_gyro_simpletest.py
+    :caption: examples/bmi160_gyro_simpletest.py
+    :linenos:
+
+
 Acceleration Data Range
 ------------------------
 

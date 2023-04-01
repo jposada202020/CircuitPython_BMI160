@@ -10,11 +10,8 @@ import bmi160 as BMI160
 i2c = board.I2C()  # uses board.SCL and board.SDA
 bmi = BMI160.BMI160(i2c)
 
+
 while True:
-    accx, accy, accz = bmi.acceleration
-    print("Acceleration X: ", accx)
-    print("Acceleration Y: ", accy)
-    print("Acceleration Z: ", accz)
     gyrox, gyroy, gyroz = bmi.gyro
     print("Gyro X: ", gyrox)
     print("Gyro Y: ", gyroy)
