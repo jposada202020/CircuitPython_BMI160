@@ -44,6 +44,7 @@ _REG_WHOAMI = const(0x00)
 _ERROR_CODE = const(0x02)
 _COMMAND = const(0x7E)
 _ACCEL_CONFIG = const(0x40)
+_ACC_RANGE = const(0x41)
 
 # RESET Command
 RESET_COMMAND = const(0xB6)
@@ -62,6 +63,12 @@ BANDWIDTH_400 = const(0b1010)  # 400 Hz
 BANDWIDTH_800 = const(0b1011)  # 800 Hz
 BANDWIDTH_1600 = const(0b1100)  # 1600 Hz
 
+# Acceleration Range
+ACCEL_RANGE_2G = const(0b0011)
+ACCEL_RANGE_4G = const(0b0101)
+ACCEL_RANGE_8G = const(0b1000)
+ACCEL_RANGE_16G = const(0b1100)
+
 # UNDERSAMPLE
 NO_UNDERSAMPLE = const(0)
 UNDERSAMPLE = const(1)
@@ -69,6 +76,14 @@ UNDERSAMPLE = const(1)
 # Bandwith Parameter
 FILTER = const(0)
 AVERAGING = const(1)
+
+# Acceleration Data
+ACC_X_LSB = const(0x12)
+ACC_X_MSB = const(0x13)
+ACC_Y_LSB = const(0x14)
+ACC_Y_MSB = const(0x15)
+ACC_Z_LSB = const(0x16)
+ACC_Z_MSB = const(0x17)
 
 
 # pylint: disable= invalid-name, too-many-instance-attributes, missing-function-docstring
@@ -112,6 +127,17 @@ class BMI160:
     _soft_reset = UnaryStruct(_COMMAND, "B")
     _error_code = UnaryStruct(_ERROR_CODE, "B")
     _acc_config = UnaryStruct(_ACCEL_CONFIG, "B")
+    _power_mode = UnaryStruct(0x03, "B")
+    _temperature = UnaryStruct(0x20, "B")
+
+    # Acceleration Data
+    _acc_data_x_msb = UnaryStruct(ACC_X_MSB, "B")
+    _acc_data_x_lsb = UnaryStruct(ACC_X_LSB, "B")
+    _acc_data_y_msb = UnaryStruct(ACC_Y_MSB, "B")
+    _acc_data_y_lsb = UnaryStruct(ACC_Y_LSB, "B")
+    _acc_data_z_msb = UnaryStruct(ACC_Z_MSB, "B")
+    _acc_data_z_lsb = UnaryStruct(ACC_Z_LSB, "B")
+    _read = UnaryStruct(_COMMAND, "B")
 
     # ACC_CONF Register (0x40)
     # Sets the output data rate, the bandwidth, and the read mode of the acceleration
@@ -120,6 +146,10 @@ class BMI160:
     _acc_bwp = RWBits(1, _ACCEL_CONFIG, 6)
     _acc_odr = RWBits(4, _ACCEL_CONFIG, 0)
 
+    # ACC_RANGE Register (0x41)
+    # The register allows the selection of the accelerometer g-range
+    _acc_range = RWBits(4, _ACC_RANGE, 0)
+
     def __init__(self, i2c_bus: I2C, address: int = _I2C_ADDR) -> None:
         self.i2c_device = i2c_device.I2CDevice(i2c_bus, address)
 
@@ -127,8 +157,14 @@ class BMI160:
             raise RuntimeError("Failed to find BMI160")
 
         self.soft_reset()
-        print(self.acceleration_output_data_rate)
-        print(bin(self._error_code))
+
+        self._read = 0x03
+        time.sleep(0.1)
+        self._read = 0x11
+        time.sleep(0.1)
+        self._read = 0x15
+        time.sleep(0.1)
+        self._read = 0x18
 
     def soft_reset(self) -> NoReturn:
         """
@@ -139,6 +175,38 @@ class BMI160:
         """
         self._soft_reset = RESET_COMMAND
         time.sleep(0.015)
+
+    def error_code(self):
+        """
+        The register is meant for debug purposes, not for regular verification
+        if an operation completed successfully..
+
+        Fatal Error: Error during bootup. Broken hardware(e.g.NVM error, see
+        ASIC spec for details).This flag will not be cleared after reading the
+        register.The only way to clear the flag is a POR.
+
+        Error flags (bits 7:4) store error event until they are reset by reading the register.
+
+        """
+
+        code_errors = {
+            0: "No Error",
+            1: "Error",
+            2: "Error",
+            3: "low-power mode and interrupt uses pre-filtered data",
+            6: "ODRs of enabled sensors in header-less mode do not match",
+            7: "pre-filtered data are used in low power mode",
+        }
+        errors = self._error_code
+        drop_cmd_err = (errors & 0x40) >> 6
+        error_codes = (errors & 0x1E) >> 1
+        fatal_error = errors & 0x01
+        if drop_cmd_err:
+            print("Drop Command Error")
+        if code_errors[error_codes] != "No Error":
+            print(code_errors[error_codes])
+        if fatal_error:
+            print("Fatal Error")
 
     @property
     def acceleration_undersample(self):
@@ -194,6 +262,8 @@ class BMI160:
         Configurations without a bandwidth number are illegal settings and will
         result in an error code in the Register (0x02) ERR_REG.
 
+        At startup this is setup at 100 Hz
+
         +----------------------------------------+---------------------------------+
         | Mode                                   | Value                           |
         +========================================+=================================+
@@ -229,3 +299,35 @@ class BMI160:
     @acceleration_output_data_rate.setter
     def acceleration_output_data_rate(self, value: int):
         self.acceleration_output_data_rate = value
+
+    @property
+    def acceleration_range(self):
+        """
+        The register allows the selection of the accelerometer g-range
+
+        +----------------------------------------+-------------------------+
+        | Mode                                   | Value                   |
+        +========================================+=========================+
+        | :py:const:`BMI.ACCEL_RANGE_2G`         | :py:const:`0b0011`      |
+        +----------------------------------------+-------------------------+
+        | :py:const:`BMI.ACCEL_RANGE_4G`         | :py:const:`0b0101`      |
+        +----------------------------------------+-------------------------+
+        | :py:const:`BMI.ACCEL_RANGE_8G`         | :py:const:`0b1000`      |
+        +----------------------------------------+-------------------------+
+        | :py:const:`BMI.ACCEL_RANGE_16G`         | :py:const:`0b1100`     |
+        +----------------------------------------+-------------------------+
+
+        """
+        return self._acc_range
+
+    @acceleration_range.setter
+    def acceleration_range(self, value: int):
+        self.acceleration_range = value
+
+    @property
+    def acceleration(self):
+
+        x = self._acc_data_x_msb * 256 + self._acc_data_x_lsb
+        y = self._acc_data_y_msb * 256 + self._acc_data_y_lsb
+        z = self._acc_data_z_msb * 256 + self._acc_data_z_lsb
+        return x, y, z
