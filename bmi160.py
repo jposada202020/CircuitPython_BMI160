@@ -32,6 +32,7 @@ from adafruit_register.i2c_bits import RWBits
 try:
     from busio import I2C
     from typing_extensions import NoReturn
+    from typing import Tuple
 except ImportError:
     pass
 
@@ -84,6 +85,10 @@ ACC_Y_LSB = const(0x14)
 ACC_Y_MSB = const(0x15)
 ACC_Z_LSB = const(0x16)
 ACC_Z_MSB = const(0x17)
+
+# Acc Power Modes
+ACC_POWER_NORMAL = const(0x11)
+ACC_POWER_SUSPEND = const(0x12)
 
 
 # pylint: disable= invalid-name, too-many-instance-attributes, missing-function-docstring
@@ -149,8 +154,7 @@ class BMI160:
     # ACC_RANGE Register (0x41)
     # The register allows the selection of the accelerometer g-range
     _acc_range = RWBits(4, _ACC_RANGE, 0)
-
-    acceleration_scale = {3: 8192, 5: 4096, 8: 2048, 12: 1024}
+    acceleration_scale = {3: 16384, 5: 8192, 8: 4096, 12: 2048}
 
     def __init__(self, i2c_bus: I2C, address: int = _I2C_ADDR) -> None:
         self.i2c_device = i2c_device.I2CDevice(i2c_bus, address)
@@ -162,11 +166,11 @@ class BMI160:
 
         self._read = 0x03
         time.sleep(0.1)
-        self._read = 0x11
+        self._read = ACC_POWER_NORMAL
         time.sleep(0.1)
         self._read = 0x15
         time.sleep(0.1)
-        self._read = 0x18
+        self._read = 0x19
 
     def soft_reset(self) -> NoReturn:
         """
@@ -178,7 +182,7 @@ class BMI160:
         self._soft_reset = RESET_COMMAND
         time.sleep(0.015)
 
-    def error_code(self):
+    def error_code(self) -> NoReturn:
         """
         The register is meant for debug purposes, not for regular verification
         if an operation completed successfully..
@@ -211,7 +215,7 @@ class BMI160:
             print("Fatal Error")
 
     @property
-    def acceleration_undersample(self):
+    def acceleration_undersample(self) -> int:
         """
         The undersampling parameter is typically used in low power mode.
         When acc_us is set to ‘0’ and the accelerometer is in low-power mode,
@@ -231,11 +235,11 @@ class BMI160:
         return self._acc_us
 
     @acceleration_undersample.setter
-    def acceleration_undersample(self, value: int):
+    def acceleration_undersample(self, value: int) -> NoReturn:
         self._acc_us = value
 
     @property
-    def acceleration_bandwidth_parameter(self):
+    def acceleration_bandwidth_parameter(self) -> int:
         """
         Determines filter configuration (acc_us=0) and averaging for
         undersampling mode (acc_us=1).
@@ -252,11 +256,11 @@ class BMI160:
         return self._acc_bwp
 
     @acceleration_bandwidth_parameter.setter
-    def acceleration_bandwidth_parameter(self, value: int):
+    def acceleration_bandwidth_parameter(self, value: int) -> NoReturn:
         self._acc_bwp = value
 
     @property
-    def acceleration_output_data_rate(self):
+    def acceleration_output_data_rate(self) -> int:
         """
         Define the output data rate in Hz is given by :math:`100/2^(8-accodr)`
         The output data rate is independent of the power mode setting for the sensor
@@ -299,13 +303,17 @@ class BMI160:
         return self._acc_odr
 
     @acceleration_output_data_rate.setter
-    def acceleration_output_data_rate(self, value: int):
+    def acceleration_output_data_rate(self, value: int) -> NoReturn:
         self._acc_odr = value
 
     @property
-    def acceleration_range(self):
+    def acceleration_range(self) -> int:
         """
-        The register allows the selection of the accelerometer g-range
+        The register allows the selection of the accelerometer g-range.
+        Changing the range of the accelerometer does not clear the data
+        ready bit in the Register (0x1B) STATUS. It is recommended to
+        read the Register (0x04-0x17) DATA after the range change to
+        remove a stall data ready bit from before the range change.
 
         +----------------------------------------+-------------------------+
         | Mode                                   | Value                   |
@@ -323,14 +331,44 @@ class BMI160:
         return self._acc_range
 
     @acceleration_range.setter
-    def acceleration_range(self, value: int):
+    def acceleration_range(self, value: int) -> NoReturn:
         self._acc_range = value
 
     @property
-    def acceleration(self):
+    def acceleration(self) -> Tuple[int, int, int]:
 
         factor = self.acceleration_scale[self.acceleration_range]
+
         x = (self._acc_data_x_msb * 256 + self._acc_data_x_lsb) / factor
         y = (self._acc_data_y_msb * 256 + self._acc_data_y_lsb) / factor
         z = (self._acc_data_z_msb * 256 + self._acc_data_z_lsb) / factor
         return x, y, z
+
+    def power_mode_status(self) -> NoReturn:
+        values = self._power_mode
+
+        acc_pmu_status = (values & 0x18) >> 4
+        gyr_pmu_status = (values & 0xC) >> 2
+        mag_pmu_status = values & 0x03
+
+        acc_pmu_codes = {0: "Suspend", 1: "Normal", 2: "Low Power"}
+        gyr_pmu_codes = {0: "Suspend", 1: "Normal", 3: "Fast Start - Up"}
+        mag_pmu_codes = {0: "Suspend", 1: "Normal", 2: "Low Power"}
+
+        print("Acceleration Power Mode: ", acc_pmu_codes[acc_pmu_status])
+        print("Gyro Power Mode", gyr_pmu_codes[gyr_pmu_status])
+        print("Mag Power Mode", mag_pmu_codes[mag_pmu_status])
+
+    def acc_power_mode(self, value: int) -> NoReturn:
+        """
+        +----------------------------------------+-------------------------+
+        | Mode                                   | Value                   |
+        +========================================+=========================+
+        | :py:const:`BMI160.ACC_POWER_NORMAL`    | :py:const:`0x11`        |
+        +----------------------------------------+-------------------------+
+        | :py:const:`BMI160.ACC_POWER_SUSPEND`   | :py:const:`0x12`        |
+        +----------------------------------------+-------------------------+
+
+        """
+        self._read = value
+        time.sleep(0.1)
