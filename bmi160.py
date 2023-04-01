@@ -19,8 +19,9 @@ Implementation Notes
   https://circuitpython.org/downloads
 
 
-# * Adafruit's Bus Device library: https://github.com/adafruit/Adafruit_CircuitPython_BusDevice
-# * Adafruit's Register library: https://github.com/adafruit/Adafruit_CircuitPython_Register
+* Adafruit's Bus Device library: https://github.com/adafruit/Adafruit_CircuitPython_BusDevice
+* Adafruit's Register library: https://github.com/adafruit/Adafruit_CircuitPython_Register
+
 """
 
 import time
@@ -87,8 +88,9 @@ ACC_Z_LSB = const(0x16)
 ACC_Z_MSB = const(0x17)
 
 # Acc Power Modes
+ACC_POWER_SUSPEND = const(0x10)
 ACC_POWER_NORMAL = const(0x11)
-ACC_POWER_SUSPEND = const(0x12)
+ACC_POWER_LOWPOWER = const(0x12)
 
 
 # pylint: disable= invalid-name, too-many-instance-attributes, missing-function-docstring
@@ -364,9 +366,11 @@ class BMI160:
         +----------------------------------------+-------------------------+
         | Mode                                   | Value                   |
         +========================================+=========================+
+        | :py:const:`BMI160.ACC_POWER_SUSPEND`   | :py:const:`0x10`        |
+        +----------------------------------------+-------------------------+
         | :py:const:`BMI160.ACC_POWER_NORMAL`    | :py:const:`0x11`        |
         +----------------------------------------+-------------------------+
-        | :py:const:`BMI160.ACC_POWER_SUSPEND`   | :py:const:`0x12`        |
+        | :py:const:`BMI160.POWER_LOWPOWER `     | :py:const:`0x12`        |
         +----------------------------------------+-------------------------+
 
         """
