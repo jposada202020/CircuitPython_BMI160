@@ -4,16 +4,16 @@
 
 import time
 import board
-import bmi160
+import bmi160 as BMI160
 
 
 i2c = board.I2C()  # uses board.SCL and board.SDA
-isl = bmi160.BMI160(i2c)
+bmi = BMI160.BMI160(i2c)
 
-accx, accy, accz = isl.acceleration
+accx, accy, accz = bmi.acceleration
 
 while True:
-    accx, accy, accz = isl.acceleration
+    accx, accy, accz = bmi.acceleration
     print("Acceleration X: ", accx)
     print("Acceleration Y: ", accy)
     print("Acceleration Z: ", accz)

@@ -105,20 +105,20 @@ class BMI160:
         .. code-block:: python
 
             import board
-            import circuitpython_BMI160.BMI160 as BMI160
+            import bmi160 as BMI160
 
     Once this is done you can define your `board.I2C` object and define your sensor object
 
         .. code-block:: python
 
             i2c = board.I2C()  # uses board.SCL and board.SDA
-            isl = BMI160.BMI160(i2c)
+            bmi = BMI160.BMI160(i2c)
 
     Now you have access to the attributes
 
         .. code-block:: python
 
-            TODO: XXXXXXXXXXXXXXXXXXXXXX
+            accx, accy, accz = bmi.acceleration
 
 
     """
@@ -149,6 +149,8 @@ class BMI160:
     # ACC_RANGE Register (0x41)
     # The register allows the selection of the accelerometer g-range
     _acc_range = RWBits(4, _ACC_RANGE, 0)
+
+    acceleration_scale = {3: 8192, 5: 4096, 8: 2048, 12: 1024}
 
     def __init__(self, i2c_bus: I2C, address: int = _I2C_ADDR) -> None:
         self.i2c_device = i2c_device.I2CDevice(i2c_bus, address)
@@ -220,9 +222,9 @@ class BMI160:
         +----------------------------------------+-------------------------+
         | Mode                                   | Value                   |
         +========================================+=========================+
-        | :py:const:`BMI.NO_UNDERSAMPLE`         | :py:const:`0`           |
+        | :py:const:`BMI160.NO_UNDERSAMPLE`      | :py:const:`0`           |
         +----------------------------------------+-------------------------+
-        | :py:const:`BMI.UNDERSAMPLE`            | :py:const:`1`           |
+        | :py:const:`BMI160.UNDERSAMPLE`         | :py:const:`1`           |
         +----------------------------------------+-------------------------+
 
         """
@@ -230,7 +232,7 @@ class BMI160:
 
     @acceleration_undersample.setter
     def acceleration_undersample(self, value: int):
-        self.acceleration_undersample = value
+        self._acc_us = value
 
     @property
     def acceleration_bandwidth_parameter(self):
@@ -241,9 +243,9 @@ class BMI160:
         +----------------------------------------+-------------------------+
         | Mode                                   | Value                   |
         +========================================+=========================+
-        | :py:const:`BMI.FILTER`                 | :py:const:`0`           |
+        | :py:const:`BMI160.FILTER`              | :py:const:`0`           |
         +----------------------------------------+-------------------------+
-        | :py:const:`BMI.AVERAGING`              | :py:const:`1`           |
+        | :py:const:`BMI160.AVERAGING`           | :py:const:`1`           |
         +----------------------------------------+-------------------------+
 
         """
@@ -251,7 +253,7 @@ class BMI160:
 
     @acceleration_bandwidth_parameter.setter
     def acceleration_bandwidth_parameter(self, value: int):
-        self.acceleration_bandwidth_parameter = value
+        self._acc_bwp = value
 
     @property
     def acceleration_output_data_rate(self):
@@ -267,29 +269,29 @@ class BMI160:
         +----------------------------------------+---------------------------------+
         | Mode                                   | Value                           |
         +========================================+=================================+
-        | :py:const:`BMI.BANDWIDTH_25_32`        | :py:const:`0b0001` 25/32 Hz     |
+        | :py:const:`BMI160.BANDWIDTH_25_32`     | :py:const:`0b0001` 25/32 Hz     |
         +----------------------------------------+---------------------------------+
-        | :py:const:`BMI.BANDWIDTH_25_16`        | :py:const:`0b0010` 25/16 Hz     |
+        | :py:const:`BMI160.BANDWIDTH_25_16`     | :py:const:`0b0010` 25/16 Hz     |
         +----------------------------------------+---------------------------------+
-        | :py:const:`BMI.BANDWIDTH_25_8`         | :py:const:`0b0011` 25/8 Hz      |
+        | :py:const:`BMI160.BANDWIDTH_25_8`      | :py:const:`0b0011` 25/8 Hz      |
         +----------------------------------------+---------------------------------+
-        | :py:const:`BMI.BANDWIDTH_25_4`         | :py:const:`0b0100` 25/4 Hz      |
+        | :py:const:`BMI160.BANDWIDTH_25_4`      | :py:const:`0b0100` 25/4 Hz      |
         +----------------------------------------+---------------------------------+
-        | :py:const:`BMI.BANDWIDTH_25_2`         | :py:const:`0b0101` 25/2 Hz      |
+        | :py:const:`BMI160.BANDWIDTH_25_2`      | :py:const:`0b0101` 25/2 Hz      |
         +----------------------------------------+---------------------------------+
-        | :py:const:`BMI.BANDWIDTH_25`           | :py:const:`0b0110` 25 Hz        |
+        | :py:const:`BMI160.BANDWIDTH_25`        | :py:const:`0b0110` 25 Hz        |
         +----------------------------------------+---------------------------------+
-        | :py:const:`BMI.BANDWIDTH_50`           | :py:const:`0b0111` 50 Hz        |
+        | :py:const:`BMI160.BANDWIDTH_50`        | :py:const:`0b0111` 50 Hz        |
         +----------------------------------------+---------------------------------+
-        | :py:const:`BMI.BANDWIDTH_100`          | :py:const:`0b1000` 100 Hz       |
+        | :py:const:`BMI160.BANDWIDTH_100`       | :py:const:`0b1000` 100 Hz       |
         +----------------------------------------+---------------------------------+
-        | :py:const:`BMI.BANDWIDTH_200`          | :py:const:`0b1001` 200 Hz       |
+        | :py:const:`BMI160.BANDWIDTH_200`       | :py:const:`0b1001` 200 Hz       |
         +----------------------------------------+---------------------------------+
-        | :py:const:`BMI.BANDWIDTH_400`          | :py:const:`0b1010` 400 Hz       |
+        | :py:const:`BMI160.BANDWIDTH_400`       | :py:const:`0b1010` 400 Hz       |
         +----------------------------------------+---------------------------------+
-        | :py:const:`BMI.BANDWIDTH_800`          | :py:const:`0b1011` 800 Hz       |
+        | :py:const:`BMI160.BANDWIDTH_800`       | :py:const:`0b1011` 800 Hz       |
         +----------------------------------------+---------------------------------+
-        | :py:const:`BMI.BANDWIDTH_1600`         | :py:const:`0b1100` 1600 Hz      |
+        | :py:const:`BMI160.BANDWIDTH_1600`      | :py:const:`0b1100` 1600 Hz      |
         +----------------------------------------+---------------------------------+
 
 
@@ -298,7 +300,7 @@ class BMI160:
 
     @acceleration_output_data_rate.setter
     def acceleration_output_data_rate(self, value: int):
-        self.acceleration_output_data_rate = value
+        self._acc_odr = value
 
     @property
     def acceleration_range(self):
@@ -308,13 +310,13 @@ class BMI160:
         +----------------------------------------+-------------------------+
         | Mode                                   | Value                   |
         +========================================+=========================+
-        | :py:const:`BMI.ACCEL_RANGE_2G`         | :py:const:`0b0011`      |
+        | :py:const:`BMI160.ACCEL_RANGE_2G`      | :py:const:`0b0011`      |
         +----------------------------------------+-------------------------+
-        | :py:const:`BMI.ACCEL_RANGE_4G`         | :py:const:`0b0101`      |
+        | :py:const:`BMI160.ACCEL_RANGE_4G`      | :py:const:`0b0101`      |
         +----------------------------------------+-------------------------+
-        | :py:const:`BMI.ACCEL_RANGE_8G`         | :py:const:`0b1000`      |
+        | :py:const:`BMI160.ACCEL_RANGE_8G`      | :py:const:`0b1000`      |
         +----------------------------------------+-------------------------+
-        | :py:const:`BMI.ACCEL_RANGE_16G`         | :py:const:`0b1100`     |
+        | :py:const:`BMI160.ACCEL_RANGE_16G`     | :py:const:`0b1100`      |
         +----------------------------------------+-------------------------+
 
         """
@@ -322,12 +324,13 @@ class BMI160:
 
     @acceleration_range.setter
     def acceleration_range(self, value: int):
-        self.acceleration_range = value
+        self._acc_range = value
 
     @property
     def acceleration(self):
 
-        x = self._acc_data_x_msb * 256 + self._acc_data_x_lsb
-        y = self._acc_data_y_msb * 256 + self._acc_data_y_lsb
-        z = self._acc_data_z_msb * 256 + self._acc_data_z_lsb
+        factor = self.acceleration_scale[self.acceleration_range]
+        x = (self._acc_data_x_msb * 256 + self._acc_data_x_lsb) / factor
+        y = (self._acc_data_y_msb * 256 + self._acc_data_y_lsb) / factor
+        z = (self._acc_data_z_msb * 256 + self._acc_data_z_lsb) / factor
         return x, y, z
