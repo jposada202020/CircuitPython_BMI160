@@ -99,7 +99,7 @@ ACC_POWER_LOWPOWER = const(0x12)
 TEMP_LSB = const(0x20)
 TEMP_MSB = const(0x21)
 
-# Acceleration Data
+# Gyro Data
 GYRO_X_LSB = const(0x0C)
 GYRO_X_MSB = const(0x0D)
 GYRO_Y_LSB = const(0x0E)
@@ -157,6 +157,7 @@ class BMI160:
         .. code-block:: python
 
             accx, accy, accz = bmi.acceleration
+            gyrox, gyroy, gyroz = bmi.gyro
 
 
     """
@@ -188,7 +189,7 @@ class BMI160:
     # The register allows the selection of the accelerometer g-range
     _acc_range = RWBits(4, _ACC_RANGE, 0)
     acceleration_scale = {3: 16384, 5: 8192, 8: 4096, 12: 2048}
-    gyro_scale = {0: 16.4, 1: 32.8, 2: 65.6, 3: 131.2, 262.4}
+    gyro_scale = {0: 16.4, 1: 32.8, 2: 65.6, 3: 131.2, 4: 262.4}
 
     # Temperature
     _temp_data_msb = UnaryStruct(TEMP_MSB, "B")
@@ -225,7 +226,6 @@ class BMI160:
         time.sleep(0.1)
         self._read = GYRO_POWER_NORMAL
         time.sleep(0.1)
-        self._read = 0x19
 
     def soft_reset(self) -> NoReturn:
         """
