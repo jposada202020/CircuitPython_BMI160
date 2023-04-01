@@ -92,6 +92,10 @@ ACC_POWER_SUSPEND = const(0x10)
 ACC_POWER_NORMAL = const(0x11)
 ACC_POWER_LOWPOWER = const(0x12)
 
+# Temperature
+TEMP_LSB = const(0x20)
+TEMP_MSB = const(0x21)
+
 
 # pylint: disable= invalid-name, too-many-instance-attributes, missing-function-docstring
 
@@ -135,7 +139,6 @@ class BMI160:
     _error_code = UnaryStruct(_ERROR_CODE, "B")
     _acc_config = UnaryStruct(_ACCEL_CONFIG, "B")
     _power_mode = UnaryStruct(0x03, "B")
-    _temperature = UnaryStruct(0x20, "B")
 
     # Acceleration Data
     _acc_data_x_msb = UnaryStruct(ACC_X_MSB, "B")
@@ -157,6 +160,10 @@ class BMI160:
     # The register allows the selection of the accelerometer g-range
     _acc_range = RWBits(4, _ACC_RANGE, 0)
     acceleration_scale = {3: 16384, 5: 8192, 8: 4096, 12: 2048}
+
+    # Temperature
+    _temp_data_msb = UnaryStruct(TEMP_MSB, "B")
+    _temp_data_lsb = UnaryStruct(TEMP_LSB, "B")
 
     def __init__(self, i2c_bus: I2C, address: int = _I2C_ADDR) -> None:
         self.i2c_device = i2c_device.I2CDevice(i2c_bus, address)
@@ -376,3 +383,18 @@ class BMI160:
         """
         self._read = value
         time.sleep(0.1)
+
+    @property
+    def temperature(self) -> int:
+        """
+        The temperature is disabled when all sensors are in suspend mode. The output
+        word of the 16-bit temperature sensor is valid if the gyroscope is in normal
+        mode, i.e. gyr_pmu_status=0b01. The resolution is typically :math:`1/2^9` K/LSB.
+
+        If the gyroscope is in normal mode (see Register (0x03) PMU_STATUS),
+        the temperature is updated every 10 ms (+-12%). If the gyroscope is in suspend
+        mode or fast-power up mode, the temperature is updated every 1.28 s aligned
+        :return: int
+        """
+
+        return ((self._temp_data_msb * 256 + self._temp_data_lsb) * 1/2**9) + 23
