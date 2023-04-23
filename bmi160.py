@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 """
-`bmi160`
+`BMI160`
 ================================================================================
 
 Driver for the BMI160 sensor
@@ -20,6 +20,7 @@ Implementation Notes
 
 
 * Adafruit's Bus Device library: https://github.com/adafruit/Adafruit_CircuitPython_BusDevice
+
 * Adafruit's Register library: https://github.com/adafruit/Adafruit_CircuitPython_Register
 
 """
@@ -52,7 +53,7 @@ _GYRO_RANGE = const(0x43)
 # RESET Command
 RESET_COMMAND = const(0xB6)
 
-# Acceleration Output Rate HZ
+# BMI160 Acceleration Output Rate HZ
 BANDWIDTH_25_32 = const(0b0001)  # 25/32 Hz
 BANDWIDTH_25_16 = const(0b0010)  # 25/16 Hz
 BANDWIDTH_25_8 = const(0b0011)  # 25/8 Hz
@@ -66,20 +67,38 @@ BANDWIDTH_400 = const(0b1010)  # 400 Hz
 BANDWIDTH_800 = const(0b1011)  # 800 Hz
 BANDWIDTH_1600 = const(0b1100)  # 1600 Hz
 BANDWIDTH_3200 = const(0b1101)  # 3200 Hz
+bandwidth_values = (
+    BANDWIDTH_25_32,
+    BANDWIDTH_25_16,
+    BANDWIDTH_25_8,
+    BANDWIDTH_25_4,
+    BANDWIDTH_25_2,
+    BANDWIDTH_25,
+    BANDWIDTH_50,
+    BANDWIDTH_100,
+    BANDWIDTH_200,
+    BANDWIDTH_400,
+    BANDWIDTH_800,
+    BANDWIDTH_1600,
+    BANDWIDTH_3200,
+)
 
-# Acceleration Range
+# BMI160 Acceleration Range
 ACCEL_RANGE_2G = const(0b0011)
 ACCEL_RANGE_4G = const(0b0101)
 ACCEL_RANGE_8G = const(0b1000)
 ACCEL_RANGE_16G = const(0b1100)
+acc_range_values = (ACCEL_RANGE_2G, ACCEL_RANGE_4G, ACCEL_RANGE_8G, ACCEL_RANGE_16G)
 
 # UNDERSAMPLE
 NO_UNDERSAMPLE = const(0)
 UNDERSAMPLE = const(1)
+acc_sample_values = (NO_UNDERSAMPLE, UNDERSAMPLE)
 
-# Bandwith Parameter
+# Bandwidth Parameter
 FILTER = const(0)
 AVERAGING = const(1)
+acc_bandwidth_values = (FILTER, AVERAGING)
 
 # Acceleration Data
 ACC_X_LSB = const(0x12)
@@ -93,6 +112,7 @@ ACC_Z_MSB = const(0x17)
 ACC_POWER_SUSPEND = const(0x10)
 ACC_POWER_NORMAL = const(0x11)
 ACC_POWER_LOWPOWER = const(0x12)
+acc_power_mode_values = (ACC_POWER_LOWPOWER, ACC_POWER_NORMAL, ACC_POWER_SUSPEND)
 
 # Temperature
 TEMP_LSB = const(0x20)
@@ -110,6 +130,7 @@ GYRO_Z_MSB = const(0x11)
 GYRO_NORMAL = const(0b10)
 GYRO_OSR2 = const(0b01)
 GYRO_OSR4 = const(0b00)
+gyro_cutoffs_values = (GYRO_OSR4, GYRO_OSR2, GYRO_NORMAL)
 
 # Gyro Power Modes
 GYRO_POWER_SUSPEND = const(0x14)
@@ -147,24 +168,24 @@ class BMI160:
     Here is an example of using the :class:`BMI160` class.
     First you will need to import the libraries to use the sensor
 
-        .. code-block:: python
+    .. code-block:: python
 
-            import board
-            import bmi160 as BMI160
+        import board
+        import bmi160 as BMI160
 
     Once this is done you can define your `board.I2C` object and define your sensor object
 
-        .. code-block:: python
+    .. code-block:: python
 
-            i2c = board.I2C()  # uses board.SCL and board.SDA
-            bmi = BMI160.BMI160(i2c)
+        i2c = board.I2C()  # uses board.SCL and board.SDA
+        bmi = BMI160.BMI160(i2c)
 
     Now you have access to the attributes
 
-        .. code-block:: python
+    .. code-block:: python
 
-            accx, accy, accz = bmi.acceleration
-            gyrox, gyroy, gyroz = bmi.gyro
+        accx, accy, accz = bmi.acceleration
+        gyrox, gyroy, gyroz = bmi.gyro
 
 
     """
@@ -277,7 +298,7 @@ class BMI160:
             print("Fatal Error")
 
     @property
-    def acceleration_undersample(self) -> int:
+    def acceleration_undersample(self) -> str:
         """
         The undersampling parameter is typically used in low power mode.
         When acc_us is set to ‘0’ and the accelerometer is in low-power mode,
@@ -294,14 +315,17 @@ class BMI160:
         +----------------------------------------+-------------------------+
 
         """
-        return self._acc_us
+        sample_values = ("NO_UNDERSAMPLE", "UNDERSAMPLE")
+        return sample_values[self._acc_us]
 
     @acceleration_undersample.setter
     def acceleration_undersample(self, value: int) -> None:
+        if value not in acc_sample_values:
+            raise ValueError("Value must be a valid acceleration undersample value")
         self._acc_us = value
 
     @property
-    def acceleration_bandwidth_parameter(self) -> int:
+    def acceleration_bandwidth_parameter(self) -> str:
         """
         Determines filter configuration (acc_us=0) and averaging for
         undersampling mode (acc_us=1).
@@ -315,14 +339,17 @@ class BMI160:
         +----------------------------------------+-------------------------+
 
         """
-        return self._acc_bwp
+        values = ("FILTER", "AVERAGING")
+        return values[self._acc_bwp]
 
     @acceleration_bandwidth_parameter.setter
     def acceleration_bandwidth_parameter(self, value: int) -> None:
+        if value not in acc_bandwidth_values:
+            raise ValueError("Value must a be a valid Acceleration bandwidth setting")
         self._acc_bwp = value
 
     @property
-    def acceleration_output_data_rate(self) -> int:
+    def acceleration_output_data_rate(self) -> str:
         """
         Define the output data rate in Hz is given by :math:`100/2^(8-accodr)`
         The output data rate is independent of the power mode setting for the sensor
@@ -361,14 +388,31 @@ class BMI160:
         +----------------------------------------+---------------------------------+
 
         """
-        return self._acc_odr
+        values = (
+            "BANDWIDTH_25_32",
+            "BANDWIDTH_25_16",
+            "BANDWIDTH_25_8",
+            "BANDWIDTH_25_4",
+            "BANDWIDTH_25_2",
+            "BANDWIDTH_25",
+            "BANDWIDTH_50",
+            "BANDWIDTH_100",
+            "BANDWIDTH_200",
+            "BANDWIDTH_400",
+            "BANDWIDTH_800",
+            "BANDWIDTH_1600",
+            "BANDWIDTH_3200",
+        )
+        return values[self._acc_odr]
 
     @acceleration_output_data_rate.setter
     def acceleration_output_data_rate(self, value: int) -> None:
+        if value not in bandwidth_values:
+            raise ValueError("Value must be a valid Acceleration Data Rate setting")
         self._acc_odr = value
 
     @property
-    def acceleration_range(self) -> int:
+    def acceleration_range(self) -> str:
         """
         The register allows the selection of the accelerometer g-range.
         Changing the range of the accelerometer does not clear the data
@@ -389,16 +433,24 @@ class BMI160:
         +----------------------------------------+-------------------------+
 
         """
-        return self._acc_range
+        values = {
+            3: "ACCEL_RANGE_2G",
+            5: "ACCEL_RANGE_4G",
+            8: "ACCEL_RANGE_8G",
+            12: "ACCEL_RANGE_16G",
+        }
+        return values[self._acc_range]
 
     @acceleration_range.setter
     def acceleration_range(self, value: int) -> None:
+        if value not in acc_range_values:
+            raise ValueError("Value must be a valid Acceleration Range setting")
         self._acc_range = value
 
     @property
     def acceleration(self) -> Tuple[int, int, int]:
 
-        factor = self.acceleration_scale[self.acceleration_range]
+        factor = self.acceleration_scale[self._acc_range]
 
         x = (self._acc_data_x_msb * 256 + self._acc_data_x_lsb) / factor
         y = (self._acc_data_y_msb * 256 + self._acc_data_y_lsb) / factor
@@ -433,6 +485,8 @@ class BMI160:
         +----------------------------------------+-------------------------+
 
         """
+        if value not in acc_power_mode_values:
+            raise ValueError("Value must be a valid Acceleration Power Mode Setting")
         self._read = value
         time.sleep(0.1)
 
@@ -454,7 +508,7 @@ class BMI160:
     @property
     def gyro(self) -> Tuple[int, int, int]:
 
-        factor = self.gyro_scale[self.gyro_range]
+        factor = self.gyro_scale[self._gyro_range]
 
         x = (self._gyro_data_x_msb * 256 + self._gyro_data_x_lsb) / factor
         y = (self._gyro_data_y_msb * 256 + self._gyro_data_y_lsb) / factor
@@ -462,7 +516,7 @@ class BMI160:
         return x, y, z
 
     @property
-    def gyro_output_data_rate(self) -> int:
+    def gyro_output_data_rate(self) -> str:
         """
         Define the output data rate in Hz is given by :math:`100/2^(8-gyroodr)`
         The output data rate is independent of the power mode setting for the sensor
@@ -497,15 +551,32 @@ class BMI160:
         +----------------------------------------+---------------------------------+
 
         """
+        values = (
+            "BANDWIDTH_25_32",
+            "BANDWIDTH_25_16",
+            "BANDWIDTH_25_8",
+            "BANDWIDTH_25_4",
+            "BANDWIDTH_25_2",
+            "BANDWIDTH_25",
+            "BANDWIDTH_50",
+            "BANDWIDTH_100",
+            "BANDWIDTH_200",
+            "BANDWIDTH_400",
+            "BANDWIDTH_800",
+            "BANDWIDTH_1600",
+            "BANDWIDTH_3200",
+        )
 
-        return self._gyro_odr
+        return values[self._gyro_odr]
 
     @gyro_output_data_rate.setter
     def gyro_output_data_rate(self, value: int) -> None:
+        if value not in bandwidth_values:
+            raise ValueError("Value must be a valid Gyro Data Rate setting")
         self._gyro_odr = value
 
     @property
-    def gyro_bandwidth_parameter(self) -> int:
+    def gyro_bandwidth_parameter(self) -> str:
         """
         The gyroscope bandwidth coefficient defines the 3 dB cutoff frequency
          of the low pass filter for the sensor data.
@@ -545,10 +616,13 @@ class BMI160:
         +----------------------------------------+-------------------------+
 
         """
-        return self._gyro_bwp
+        values = ("GYRO_OSR4", "GYRO_OSR2", "GYRO_NORMAL")
+        return values[self._gyro_bwp]
 
     @gyro_bandwidth_parameter.setter
     def gyro_bandwidth_parameter(self, value: int) -> None:
+        if value not in gyro_cutoffs_values:
+            raise ValueError("Value must be a valid Gyro Bandwidth setting")
         self._gyro_bwp = value
 
     @property
