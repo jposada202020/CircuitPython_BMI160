@@ -136,7 +136,7 @@ html_theme_options = {
             "link": "https://pypi.org/project/circuitpython-bmi160/",
         },
         {
-            "name": "MicroPython Downloads",
+            "name": "CircuitPython Downloads",
             "icon": "octicons/download-24",
             "link": "https://circuitpython.org",
         },

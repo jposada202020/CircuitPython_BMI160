@@ -32,7 +32,6 @@ from adafruit_register.i2c_bits import RWBits
 
 try:
     from busio import I2C
-    from typing_extensions import NoReturn
     from typing import Tuple
 except ImportError:
     pass
@@ -116,6 +115,7 @@ GYRO_OSR4 = const(0b00)
 GYRO_POWER_SUSPEND = const(0x14)
 GYRO_POWER_NORMAL = const(0x15)
 GYRO_POWER_FASTSTARTUP = const(0x17)
+gyro_power_modes = (GYRO_POWER_SUSPEND, GYRO_POWER_NORMAL, GYRO_POWER_FASTSTARTUP)
 
 # Gyro Ranges
 GYRO_RANGE_2000 = const(0b000)
@@ -123,6 +123,13 @@ GYRO_RANGE_1000 = const(0b001)
 GYRO_RANGE_500 = const(0b010)
 GYRO_RANGE_250 = const(0b011)
 GYRO_RANGE_125 = const(0b100)
+gyro_values = (
+    GYRO_RANGE_125,
+    GYRO_RANGE_250,
+    GYRO_RANGE_500,
+    GYRO_RANGE_1000,
+    GYRO_RANGE_2000,
+)
 
 # pylint: disable= invalid-name, too-many-instance-attributes, missing-function-docstring
 
@@ -227,7 +234,7 @@ class BMI160:
         self._read = GYRO_POWER_NORMAL
         time.sleep(0.1)
 
-    def soft_reset(self) -> NoReturn:
+    def soft_reset(self) -> None:
         """
         Performs a Soft Reset
 
@@ -237,7 +244,7 @@ class BMI160:
         self._soft_reset = RESET_COMMAND
         time.sleep(0.015)
 
-    def error_code(self) -> NoReturn:
+    def error_code(self) -> None:
         """
         The register is meant for debug purposes, not for regular verification
         if an operation completed successfully.
@@ -290,7 +297,7 @@ class BMI160:
         return self._acc_us
 
     @acceleration_undersample.setter
-    def acceleration_undersample(self, value: int) -> NoReturn:
+    def acceleration_undersample(self, value: int) -> None:
         self._acc_us = value
 
     @property
@@ -311,7 +318,7 @@ class BMI160:
         return self._acc_bwp
 
     @acceleration_bandwidth_parameter.setter
-    def acceleration_bandwidth_parameter(self, value: int) -> NoReturn:
+    def acceleration_bandwidth_parameter(self, value: int) -> None:
         self._acc_bwp = value
 
     @property
@@ -357,7 +364,7 @@ class BMI160:
         return self._acc_odr
 
     @acceleration_output_data_rate.setter
-    def acceleration_output_data_rate(self, value: int) -> NoReturn:
+    def acceleration_output_data_rate(self, value: int) -> None:
         self._acc_odr = value
 
     @property
@@ -385,7 +392,7 @@ class BMI160:
         return self._acc_range
 
     @acceleration_range.setter
-    def acceleration_range(self, value: int) -> NoReturn:
+    def acceleration_range(self, value: int) -> None:
         self._acc_range = value
 
     @property
@@ -398,7 +405,7 @@ class BMI160:
         z = (self._acc_data_z_msb * 256 + self._acc_data_z_lsb) / factor
         return x, y, z
 
-    def power_mode_status(self) -> NoReturn:
+    def power_mode_status(self) -> None:
         values = self._power_mode
 
         acc_pmu_status = (values & 0x18) >> 4
@@ -413,7 +420,7 @@ class BMI160:
         print("Gyro Power Mode", gyr_pmu_codes[gyr_pmu_status])
         print("Mag Power Mode", mag_pmu_codes[mag_pmu_status])
 
-    def acc_power_mode(self, value: int) -> NoReturn:
+    def acc_power_mode(self, value: int) -> None:
         """
         +----------------------------------------+-------------------------+
         | Mode                                   | Value                   |
@@ -490,10 +497,11 @@ class BMI160:
         +----------------------------------------+---------------------------------+
 
         """
+
         return self._gyro_odr
 
     @gyro_output_data_rate.setter
-    def gyro_output_data_rate(self, value: int) -> NoReturn:
+    def gyro_output_data_rate(self, value: int) -> None:
         self._gyro_odr = value
 
     @property
@@ -540,10 +548,11 @@ class BMI160:
         return self._gyro_bwp
 
     @gyro_bandwidth_parameter.setter
-    def gyro_bandwidth_parameter(self, value: int) -> NoReturn:
+    def gyro_bandwidth_parameter(self, value: int) -> None:
         self._gyro_bwp = value
 
-    def gyro_power_mode(self, value: int) -> NoReturn:
+    @property
+    def gyro_power_mode(self) -> str:
         """
         +-------------------------------------------+-------------------------+
         | Mode                                      | Value                   |
@@ -556,11 +565,24 @@ class BMI160:
         +-------------------------------------------+-------------------------+
 
         """
+        g_power_modes = {
+            0x14: "GYRO_POWER_SUSPEND",
+            0x15: "GYRO_POWER_NORMAL",
+            0x17: "GYRO_POWER_FASTSTARTUP",
+        }
+
+        return g_power_modes[self._read]
+
+    @gyro_power_mode.setter
+    def gyro_power_mode(self, value: int) -> None:
+        if value not in gyro_power_modes:
+            raise ValueError("Value must be a valid Gyro Power Mode")
+
         self._read = value
         time.sleep(0.1)
 
     @property
-    def gyro_range(self) -> int:
+    def gyro_range(self) -> str:
         """
         The register allows the selection of the gyro g-range.
         Changing the range of the accelerometer does not clear the data
@@ -583,8 +605,18 @@ class BMI160:
         +----------------------------------------+-------------------------+
 
         """
-        return self._gyro_range
+        g_values = (
+            "GYRO_RANGE_125",
+            "GYRO_RANGE_250",
+            "GYRO_RANGE_500",
+            "GYRO_RANGE_1000",
+            "GYRO_RANGE_2000",
+        )
+
+        return g_values[self._gyro_range]
 
     @gyro_range.setter
-    def gyro_range(self, value: int) -> NoReturn:
+    def gyro_range(self, value: int) -> None:
+        if value not in gyro_values:
+            raise ValueError("Value must be a valid Gyro range")
         self._gyro_range = value
