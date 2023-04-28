@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
+import time
 import board
 import bmi160 as BMI160
 
@@ -9,13 +10,13 @@ import bmi160 as BMI160
 i2c = board.I2C()  # uses board.SCL and board.SDA
 bmi = BMI160.BMI160(i2c)
 
-print("Current Gyro data rate", bmi.gyro_output_data_rate)
-print("Changing Gyro data rate to 25 Hz")
-bmi.gyro_output_data_rate = BMI160.BANDWIDTH_25
-print("Changed Gyro data rate", bmi.gyro_output_data_rate)
-print("Changing Gyro data rate to 200 Hz")
 bmi.gyro_output_data_rate = BMI160.BANDWIDTH_200
-print("Changed Gyro data rate", bmi.gyro_output_data_rate)
-print("Changing Gyro data rate to 800")
-bmi.gyro_output_data_rate = BMI160.BANDWIDTH_800
-print("Changed Gyro data rate", bmi.gyro_output_data_rate)
+
+while True:
+    for data_rate in BMI160.gyro_bandwidth_values:
+        print("Current Gyro Data Range: ", bmi.gyro_output_data_rate)
+        for _ in range(10):
+            gyrox, gyroy, gyroz = bmi.gyro
+            print("x:{:.2f}°/s, y:{:.2f}°/s, z{:.2f}°/s".format(gyrox, gyroy, gyroz))
+            time.sleep(0.5)
+        bmi.gyro_output_data_rate = data_rate

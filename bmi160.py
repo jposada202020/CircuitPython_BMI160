@@ -53,7 +53,7 @@ _GYRO_RANGE = const(0x43)
 # RESET Command
 RESET_COMMAND = const(0xB6)
 
-# BMI160 Acceleration Output Rate HZ
+# Acceleration Output Rate HZ
 BANDWIDTH_25_32 = const(0b0001)  # 25/32 Hz
 BANDWIDTH_25_16 = const(0b0010)  # 25/16 Hz
 BANDWIDTH_25_8 = const(0b0011)  # 25/8 Hz
@@ -82,8 +82,18 @@ bandwidth_values = (
     BANDWIDTH_1600,
     BANDWIDTH_3200,
 )
+gyro_bandwidth_values = (
+    BANDWIDTH_25,
+    BANDWIDTH_50,
+    BANDWIDTH_100,
+    BANDWIDTH_200,
+    BANDWIDTH_400,
+    BANDWIDTH_800,
+    BANDWIDTH_1600,
+    BANDWIDTH_3200,
+)
 
-# BMI160 Acceleration Range
+# Acceleration Range
 ACCEL_RANGE_2G = const(0b0011)
 ACCEL_RANGE_4G = const(0b0101)
 ACCEL_RANGE_8G = const(0b1000)
@@ -102,11 +112,8 @@ acc_bandwidth_values = (FILTER, AVERAGING)
 
 # Acceleration Data
 ACC_X_LSB = const(0x12)
-ACC_X_MSB = const(0x13)
 ACC_Y_LSB = const(0x14)
-ACC_Y_MSB = const(0x15)
 ACC_Z_LSB = const(0x16)
-ACC_Z_MSB = const(0x17)
 
 # Acc Power Modes
 ACC_POWER_SUSPEND = const(0x10)
@@ -116,15 +123,11 @@ acc_power_mode_values = (ACC_POWER_LOWPOWER, ACC_POWER_NORMAL, ACC_POWER_SUSPEND
 
 # Temperature
 TEMP_LSB = const(0x20)
-TEMP_MSB = const(0x21)
 
 # Gyro Data
 GYRO_X_LSB = const(0x0C)
-GYRO_X_MSB = const(0x0D)
 GYRO_Y_LSB = const(0x0E)
-GYRO_Y_MSB = const(0x0F)
 GYRO_Z_LSB = const(0x10)
-GYRO_Z_MSB = const(0x11)
 
 # Gyro Cutoffs
 GYRO_NORMAL = const(0b10)
@@ -198,12 +201,9 @@ class BMI160:
     _gyro_config = UnaryStruct(_GYRO_CONFIG, "B")
 
     # Acceleration Data
-    _acc_data_x_msb = UnaryStruct(ACC_X_MSB, "B")
-    _acc_data_x_lsb = UnaryStruct(ACC_X_LSB, "B")
-    _acc_data_y_msb = UnaryStruct(ACC_Y_MSB, "B")
-    _acc_data_y_lsb = UnaryStruct(ACC_Y_LSB, "B")
-    _acc_data_z_msb = UnaryStruct(ACC_Z_MSB, "B")
-    _acc_data_z_lsb = UnaryStruct(ACC_Z_LSB, "B")
+    _acc_data_x = UnaryStruct(ACC_X_LSB, "<h")
+    _acc_data_y = UnaryStruct(ACC_Y_LSB, "<h")
+    _acc_data_z = UnaryStruct(ACC_Z_LSB, "<h")
     _read = UnaryStruct(_COMMAND, "B")
 
     # ACC_CONF Register (0x40)
@@ -216,20 +216,27 @@ class BMI160:
     # ACC_RANGE Register (0x41)
     # The register allows the selection of the accelerometer g-range
     _acc_range = RWBits(4, _ACC_RANGE, 0)
-    acceleration_scale = {3: 16384, 5: 8192, 8: 4096, 12: 2048}
-    gyro_scale = {0: 16.4, 1: 32.8, 2: 65.6, 3: 131.2, 4: 262.4}
+    acceleration_scale = {
+        "ACCEL_RANGE_2G": 16384,
+        "ACCEL_RANGE_4G": 8192,
+        "ACCEL_RANGE_8G": 4096,
+        "ACCEL_RANGE_16G": 2048,
+    }
+    gyro_scale = {
+        "GYRO_RANGE_125": 16.4,
+        "GYRO_RANGE_250": 32.8,
+        "GYRO_RANGE_500": 65.6,
+        "GYRO_RANGE_1000": 131.2,
+        "GYRO_RANGE_2000": 262.4,
+    }
 
     # Temperature
-    _temp_data_msb = UnaryStruct(TEMP_MSB, "B")
-    _temp_data_lsb = UnaryStruct(TEMP_LSB, "B")
+    _temp_data = UnaryStruct(TEMP_LSB, "<h")
 
     # Gyro Data
-    _gyro_data_x_msb = UnaryStruct(GYRO_X_MSB, "B")
-    _gyro_data_x_lsb = UnaryStruct(GYRO_X_LSB, "B")
-    _gyro_data_y_msb = UnaryStruct(GYRO_Y_MSB, "B")
-    _gyro_data_y_lsb = UnaryStruct(GYRO_Y_LSB, "B")
-    _gyro_data_z_msb = UnaryStruct(GYRO_Z_MSB, "B")
-    _gyro_data_z_lsb = UnaryStruct(GYRO_Z_LSB, "B")
+    _gyro_data_x = UnaryStruct(GYRO_X_LSB, "<h")
+    _gyro_data_y = UnaryStruct(GYRO_Y_LSB, "<h")
+    _gyro_data_z = UnaryStruct(GYRO_Z_LSB, "<h")
 
     # GYRO_CONF Register (0x41)
     # Sets the output data rate, the bandwidth, and the read mode of the gyro
@@ -259,7 +266,7 @@ class BMI160:
         """
         Performs a Soft Reset
 
-        :return: NoReturn
+        :return: None
 
         """
         self._soft_reset = RESET_COMMAND
@@ -450,11 +457,11 @@ class BMI160:
     @property
     def acceleration(self) -> Tuple[int, int, int]:
 
-        factor = self.acceleration_scale[self._acc_range]
+        factor = self.acceleration_scale[self.acceleration_range]
 
-        x = (self._acc_data_x_msb * 256 + self._acc_data_x_lsb) / factor
-        y = (self._acc_data_y_msb * 256 + self._acc_data_y_lsb) / factor
-        z = (self._acc_data_z_msb * 256 + self._acc_data_z_lsb) / factor
+        x = self._acc_data_x / factor
+        y = self._acc_data_y / factor
+        z = self._acc_data_z / factor
         return x, y, z
 
     def power_mode_status(self) -> None:
@@ -503,16 +510,16 @@ class BMI160:
         :return: int
         """
 
-        return ((self._temp_data_msb * 256 + self._temp_data_lsb) * 1 / 2**9) + 23
+        return (self._temp_data * 1 / 2**9) + 23
 
     @property
     def gyro(self) -> Tuple[int, int, int]:
 
-        factor = self.gyro_scale[self._gyro_range]
+        factor = self.gyro_scale[self.gyro_range]
 
-        x = (self._gyro_data_x_msb * 256 + self._gyro_data_x_lsb) / factor
-        y = (self._gyro_data_y_msb * 256 + self._gyro_data_y_lsb) / factor
-        z = (self._gyro_data_z_msb * 256 + self._gyro_data_z_lsb) / factor
+        x = self._gyro_data_x / factor
+        y = self._gyro_data_y / factor
+        z = self._gyro_data_z / factor
         return x, y, z
 
     @property
@@ -552,11 +559,6 @@ class BMI160:
 
         """
         values = (
-            "BANDWIDTH_25_32",
-            "BANDWIDTH_25_16",
-            "BANDWIDTH_25_8",
-            "BANDWIDTH_25_4",
-            "BANDWIDTH_25_2",
             "BANDWIDTH_25",
             "BANDWIDTH_50",
             "BANDWIDTH_100",
@@ -571,7 +573,7 @@ class BMI160:
 
     @gyro_output_data_rate.setter
     def gyro_output_data_rate(self, value: int) -> None:
-        if value not in bandwidth_values:
+        if value not in gyro_bandwidth_values:
             raise ValueError("Value must be a valid Gyro Data Rate setting")
         self._gyro_odr = value
 

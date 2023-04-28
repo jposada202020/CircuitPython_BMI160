@@ -11,5 +11,5 @@ i2c = board.I2C()  # uses board.SCL and board.SDA
 bmi = BMI160.BMI160(i2c)
 
 while True:
-    print("Temperature ", bmi.temperature)
+    print("Temperature {:.2f}°C".format(bmi.temperature))
     time.sleep(0.5)

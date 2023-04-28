@@ -12,11 +12,7 @@ bmi = BMI160.BMI160(i2c)
 
 while True:
     accx, accy, accz = bmi.acceleration
-    print("Acceleration X: ", accx)
-    print("Acceleration Y: ", accy)
-    print("Acceleration Z: ", accz)
+    print("x:{:.2f}m/s2, y:{:.2f}m/s2, z{:.2f}m/s2".format(accx, accy, accz))
     gyrox, gyroy, gyroz = bmi.gyro
-    print("Gyro X: ", gyrox)
-    print("Gyro Y: ", gyroy)
-    print("Gyro Z: ", gyroz)
+    print("x:{:.2f}°/s, y:{:.2f}°/s, z{:.2f}°/s".format(gyrox, gyroy, gyroz))
     time.sleep(0.5)

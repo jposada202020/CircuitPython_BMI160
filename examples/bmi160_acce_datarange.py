@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
+import time
 import board
 import bmi160 as BMI160
 
@@ -9,17 +10,13 @@ import bmi160 as BMI160
 i2c = board.I2C()  # uses board.SCL and board.SDA
 bmi = BMI160.BMI160(i2c)
 
-print("Current Acceleration Range", bmi.acceleration_range)
-print("Acceleration Values x, y, z", bmi.acceleration)
-print("Changing Acceleration Range to 4G")
 bmi.acceleration_range = BMI160.ACCEL_RANGE_4G
-print("Changed Acceleration Range", bmi.acceleration_range)
-print("Acceleration Values x, y, z", bmi.acceleration)
-print("Changing Acceleration Range to 8G")
-bmi.acceleration_range = BMI160.ACCEL_RANGE_8G
-print("Changed Acceleration Range", bmi.acceleration_range)
-print("Acceleration Values x, y, z", bmi.acceleration)
-print("Changing Acceleration Range to 8G")
-bmi.acceleration_range = BMI160.ACCEL_RANGE_16G
-print("Changed Acceleration Range", bmi.acceleration_range)
-print("Acceleration Values x, y, z", bmi.acceleration)
+
+while True:
+    for data_range in BMI160.acc_range_values:
+        print("Current Acceleration Data Rate: ", bmi.acceleration_range)
+        for _ in range(10):
+            accx, accy, accz = bmi.acceleration
+            print("x:{:.2f}m/s2, y:{:.2f}m/s2, z{:.2f}m/s2".format(accx, accy, accz))
+            time.sleep(0.5)
+        bmi.acceleration_range = data_range
