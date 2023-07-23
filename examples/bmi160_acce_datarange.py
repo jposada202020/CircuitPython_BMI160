@@ -18,5 +18,6 @@ while True:
         for _ in range(10):
             accx, accy, accz = bmi.acceleration
             print("x:{:.2f}m/s2, y:{:.2f}m/s2, z{:.2f}m/s2".format(accx, accy, accz))
+            print()
             time.sleep(0.5)
         bmi.acceleration_range = data_range

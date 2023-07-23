@@ -19,10 +19,7 @@ authors = [
 ]
 urls = {Homepage = "https://github.com/jposada202020/CircuitPython_BMI160"}
 keywords = [
-    "adafruit",
-    "blinka",
     "circuitpython",
-    "micropython",
     "bmi160",
     "acceleration",
     "gyro",

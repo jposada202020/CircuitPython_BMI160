@@ -155,8 +155,6 @@ gyro_values = (
     GYRO_RANGE_2000,
 )
 
-# pylint: disable= invalid-name, too-many-instance-attributes, missing-function-docstring
-
 
 class BMI160:
     """Driver for the BMI160 Sensor connected over I2C.
@@ -456,7 +454,9 @@ class BMI160:
 
     @property
     def acceleration(self) -> Tuple[int, int, int]:
-
+        """
+        Acceleration Values
+        """
         factor = self.acceleration_scale[self.acceleration_range]
 
         x = self._acc_data_x / factor
@@ -465,6 +465,9 @@ class BMI160:
         return x, y, z
 
     def power_mode_status(self) -> None:
+        """
+        Power mode status
+        """
         values = self._power_mode
 
         acc_pmu_status = (values & 0x18) >> 4
@@ -514,7 +517,10 @@ class BMI160:
 
     @property
     def gyro(self) -> Tuple[int, int, int]:
+        """
+        Gyro Values
 
+        """
         factor = self.gyro_scale[self.gyro_range]
 
         x = self._gyro_data_x / factor

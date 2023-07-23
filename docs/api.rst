@@ -1,5 +1,5 @@
-BMI160 Library
-==============
+CircuitPython BMI160 Library
+===================================
 
 .. automodule:: bmi160
     :members:

@@ -18,5 +18,6 @@ while True:
         for _ in range(10):
             gyrox, gyroy, gyroz = bmi.gyro
             print("x:{:.2f}°/s, y:{:.2f}°/s, z{:.2f}°/s".format(gyrox, gyroy, gyroz))
+            print()
             time.sleep(0.5)
         bmi.gyro_output_data_rate = data_rate
