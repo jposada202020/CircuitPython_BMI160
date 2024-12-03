@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2017 Scott Shawcroft, written for Adafruit Industries
+# SPDX-FileCopyrightText: 2024 Jose D. Montoya
 #
 # SPDX-License-Identifier: MIT
 
@@ -9,11 +9,20 @@ on:
     types: [published]
 
 jobs:
-  upload-release-assets:
+  pypi-publish:
+    name: Upload release to PyPI
     runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/circuitpython-bmi160
+    permissions:
+      id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
+    
     steps:
-    - name: Run PyPI Release CI workflow
-      uses: adafruit/workflows-circuitpython-libs/release-pypi@main
-      with:
-        pypi-username: ${{ secrets.pypi_username }}
-        pypi-password: ${{ secrets.pypi_password }}
+      - name: Download all the dists
+        uses: actions/download-artifact@v4
+        with:
+          name: python-package-distributions
+          path: dist/
+      - name: Publish distribution 📦 to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
