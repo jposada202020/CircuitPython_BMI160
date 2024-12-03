@@ -155,6 +155,8 @@ gyro_values = (
     GYRO_RANGE_2000,
 )
 
+STANDARD_GRAVITY = 9.80665
+
 
 class BMI160:
     """Driver for the BMI160 Sensor connected over I2C.
@@ -459,9 +461,9 @@ class BMI160:
         """
         factor = self.acceleration_scale[self.acceleration_range]
 
-        x = self._acc_data_x / factor
-        y = self._acc_data_y / factor
-        z = self._acc_data_z / factor
+        x = self._acc_data_x / factor * STANDARD_GRAVITY
+        y = self._acc_data_y / factor * STANDARD_GRAVITY
+        z = self._acc_data_z / factor * STANDARD_GRAVITY
         return x, y, z
 
     def power_mode_status(self) -> None:
