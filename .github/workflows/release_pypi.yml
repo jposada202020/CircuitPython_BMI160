@@ -17,7 +17,7 @@ jobs:
       url: https://pypi.org/p/circuitpython-bmi160
     permissions:
       id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
-    
+
     steps:
       - name: Download all the dists
         uses: actions/download-artifact@v4
